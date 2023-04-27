@@ -1,3 +1,3 @@
 # hangman_server-lighthall3
 
-Flowchart created by @jatwong
+Flowchart created by [@jatwong]
