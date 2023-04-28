@@ -1,0 +1,142 @@
+[
+    {
+        "user_id": 1,
+        "username": "John",
+        "score": 50,
+        "words_guessed": [
+            "hello",
+            "bliss",
+            "heaven",
+            "color",
+            "mountain"
+        ],
+        "current_word": "riddle",
+        "guessing_word": "______",
+        "words_left": [
+            "miserable",
+            "ecstatic",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "submitted_date": "2023-04-27",
+        "guesses_left": 6,
+        "hints_left": 2
+    },
+    {
+        "user_id": 2,
+        "username": "Jane",
+        "score": 100,
+        "words_guessed": [
+            "hello",
+            "miserable",
+            "ecstatic",
+            "bliss",
+            "color",
+            "heaven",
+            "mountain",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "current_word": "",
+        "guessing_word": "",
+        "words_left": [],
+        "submitted_date": "2023-04-21",
+        "guesses_left": 6,
+        "hints_left": 2
+    },
+    {
+        "user_id": 3,
+        "username": "Bob",
+        "score": 30,
+        "words_guessed": [
+            "hello",
+            "bliss",
+            "heaven"
+        ],
+        "current_word": "miserable",
+        "guessing_word": "_________",
+        "words_left": [
+            "miserable",
+            "ecstatic",
+            "color",
+            "mountain",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "submitted_date": "2023-04-02",
+        "guesses_left": 6,
+        "hints_left": 2
+    },
+    {
+        "user_id": 4,
+        "username": "Jo",
+        "score": 10,
+        "words_guessed": [
+            "bliss"
+        ],
+        "current_word": "color",
+        "guessing_word": "_____",
+        "words_left": [
+            "hello",
+            "miserable",
+            "ecstatic",
+            "heaven",
+            "color",
+            "mountain",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "submitted_date": "2023-01-27",
+        "guesses_left": 6,
+        "hints_left": 2
+    },
+    {
+        "user_id": 5,
+        "username": "Doe",
+        "score": 0,
+        "words_guessed": [],
+        "current_word": "sky",
+        "guessing_word": "___",
+        "words_left": [
+            "hello",
+            "miserable",
+            "ecstatic",
+            "bliss",
+            "color",
+            "heaven",
+            "mountain",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "submitted_date": "2023-04-27",
+        "guesses_left": 8,
+        "hints_left": 3
+    },
+    {
+        "user_id": 6,
+        "username": "Chloe",
+        "score": 0,
+        "words_guessed": [],
+        "current_word": "color",
+        "guessing_word": "c_l_r",
+        "words_left": [
+            "hello",
+            "miserable",
+            "ecstatic",
+            "bliss",
+            "color",
+            "heaven",
+            "mountain",
+            "sky",
+            "riddle",
+            "library"
+        ],
+        "guesses_left": 7,
+        "hints_left": 3
+    }
+]
