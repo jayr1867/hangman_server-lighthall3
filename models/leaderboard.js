@@ -52,6 +52,11 @@ const leaderboardSchema = new mongoose.Schema({
         total: {type: Number, default: 3},
         pop_up: {type: Number, default: 2},
         definition: {type: Number, default: 1}
+    },
+    shared: {
+        type: Boolean,
+        required: true,
+        default: false
     }
 });
 

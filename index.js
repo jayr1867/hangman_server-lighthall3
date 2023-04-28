@@ -17,9 +17,7 @@ const app = express();
 const port = 8080;
 const alphabetLower = "abcdefghijklmnopqrstuvwxyz";
 
-// an array just to manipulate the json data from the file,
-// will be removed when db is added.
-var LEADERS = [];
+
 
 // connecting to the db.
 mongoose.connect(uri, {
@@ -79,8 +77,15 @@ app.get('/leaderboard', async (req, res) => {
   // const data = fs.readFileSync('./leaderboard.json', 'utf-8');
   // const leadership = JSON.parse(data);
   try {
-    const leadership = await Leaderboard.find();
-    res.status(200).json({leadership});
+    const leadership = await Leaderboard.find(
+      {shared: false}, 
+      {
+        _id:1, 
+        username:1, 
+        score:1
+      }).sort({score: -1, submitted_date: -1}).limit(10);
+    
+    res.status(200).send( leadership );
   } catch (error) {
     console.log({message: error.message});
     res.status(500).send({message: error.message});
@@ -148,6 +153,11 @@ app.get('/word/:user_id', async (req, res) => {
       return;
     }
 
+    if (session_user.guessing_word.includes("_") && session_user.guesses_left > 0) {
+      res.status(400).json({message: "You have not guessed the word yet!"});
+      return;
+    }
+
     const randomIndex = Math.floor(Math.random() * session_user.words_left.length);
 
     const word = session_user.words_left[randomIndex].word;
@@ -172,7 +182,7 @@ app.get('/word/:user_id', async (req, res) => {
 
     console.log(update);
 
-    res.status(200).json({word: send_word});
+    res.status(200).json({word: send_word, score: session_user.score});
 
   } catch (error) {
     res.status(500).send({message: error.message});
@@ -219,6 +229,11 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
     var guessed = user.guessing_word;
     var send_word = "";
 
+    if (user.guesses_left <= 0) {
+      res.status(400).json({message: "You have no guesses left."});
+      return;
+    }
+
     if (guessed === word) {
       res.status(400).json({message: "You already guessed this word."});
       return;
@@ -226,6 +241,7 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
 
     var found = false;
     var won = false;
+    var flag = "right";
     // console.log(user.current_word)
 
     if (letter.includes(guess)) {
@@ -257,6 +273,7 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
       } else {
         if (!found) {
           user.guesses_left -= 1;
+          flag = "wrong";
         }
         user.letters_guessed += guess;
       }
@@ -270,6 +287,9 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
     res.status(200).json(
       {
         word: send_word,
+        flag: flag,
+        letters_guessed: user.letters_guessed,
+        score: user.score,
         guesses_left: user.guesses_left,
         hints_left: user.hints_left,
         won: won
@@ -299,99 +319,126 @@ app.get('/hint/:user_id/:type', async (req, res) => {
   // LEADERS = leadership;
 
   // var user = LEADERS.find(user => user.user_id == user_id);
+  try {
 
-  var user = await Leaderboard.findOne({_id: user_id});
+    var user = await Leaderboard.findOne({_id: user_id});
 
-  if (user.current_word === "") {
-    res.status(400).json({message: "Please start a game first."});
-    return;
-  }
-
-  // const index = LEADERS.indexOf(user);
-
-  if (user.hints_left.total <= 0) {
-    res.status(400).json({message: "You don't have any hints left."});
-    return;
-  }
-
-  if (type == "def") {
-    if (user.hints_left.definition <= 0) {
-      res.status(400).json({message: "You don't have any definition hints left."});
+    if (user.current_word === "") {
+      res.status(400).json({message: "Please start a game first."});
       return;
     }
 
-    const definition = user.words_left.find(worded => worded.word === user.current_word).definition;
+    // const index = LEADERS.indexOf(user);
 
-    user.hints_left.definition -= 1;
-    user.hints_left.total -= 1;
-
-    const update = await Leaderboard.updateOne({_id: user_id}, user);
-    res.status(200).json({Definition: definition});
-
-    return;
-  }
-
-  if (type == "pop") {
-
-    if (user.hints_left.pop_up <= 0) {
-      res.status(400).json({message: "You don't have any pop-up hints left."});
+    if (user.hints_left.total <= 0) {
+      res.status(400).json({message: "You don't have any hints left."});
       return;
     }
-    
-    var answer = user.current_word.toLowerCase();
-    var guessed = user.guessing_word;
 
-    var indices = [];
-
-    for (var i = 0; i < guessed.length; i++) {
-      if (guessed[i] == "_") {
-        indices.push(i);
+    if (type == "def") {
+      if (user.hints_left.definition <= 0) {
+        res.status(400).json({message: "You don't have any definition hints left."});
+        return;
       }
-    }
 
-    var rand_index = indices[Math.floor(Math.random() * indices.length)];
+      const definition = user.words_left.find(worded => worded.word === user.current_word).definition;
 
-    // guessed[rand_index] = answer[rand_index];
-    var check = [];
-    for (var i = 0; i < answer.length; i++) {
-      if (answer[i] === answer[rand_index]) {
-        check.push(i);
-      }
-    }
+      user.hints_left.definition -= 1;
+      user.hints_left.total -= 1;
 
-    for (var i = 0; i < check.length; i++) {
-      guessed = guessed.substring(0, check[i]) + answer[check[i]] + guessed.substring(check[i] + 1);
-    }
-
-    user.letters_guessed += answer[rand_index];
-
-    user.guessing_word = guessed;
-    user.hints_left.total -= 1;
-    user.hints_left.pop_up -= 1;
-
-    if (guessed === answer) {
-      user.score += 10;
-      const worded = user.words_left.find(worded => worded.word === user.current_word);
-      const index = user.words_left.indexOf(worded);
-      // const index = user.words_left.indexOf((worded) => worded.word === user.current_word);
-      // console.log(user.words_left[index], index);
-      user.words_guessed.push(worded);
-      user.words_left.splice(index, 1);
       const update = await Leaderboard.updateOne({_id: user_id}, user);
-      res.status(200).json({word: guessed, message: "You won!"});
+      res.status(200).json({definition: definition});
+
       return;
     }
 
-    // LEADERS[index] = user;
-    // fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
-    const update = await Leaderboard.updateOne({_id: user_id}, user);
-    res.status(200).json({word: guessed});
-    return;
+    if (type == "pop") {
+
+      if (user.hints_left.pop_up <= 0) {
+        res.status(400).json({message: "You don't have any pop-up hints left."});
+        return;
+      }
+      
+      var answer = user.current_word.toLowerCase();
+      var guessed = user.guessing_word;
+
+      var indices = [];
+
+      for (var i = 0; i < guessed.length; i++) {
+        if (guessed[i] == "_") {
+          indices.push(i);
+        }
+      }
+
+      var rand_index = indices[Math.floor(Math.random() * indices.length)];
+
+      // guessed[rand_index] = answer[rand_index];
+      var check = [];
+      for (var i = 0; i < answer.length; i++) {
+        if (answer[i] === answer[rand_index]) {
+          check.push(i);
+        }
+      }
+
+      for (var i = 0; i < check.length; i++) {
+        guessed = guessed.substring(0, check[i]) + answer[check[i]] + guessed.substring(check[i] + 1);
+      }
+
+      user.letters_guessed += answer[rand_index];
+
+      user.guessing_word = guessed;
+      user.hints_left.total -= 1;
+      user.hints_left.pop_up -= 1;
+
+      if (guessed === answer) {
+        user.score += 10;
+        const worded = user.words_left.find(worded => worded.word === user.current_word);
+        const index = user.words_left.indexOf(worded);
+        // const index = user.words_left.indexOf((worded) => worded.word === user.current_word);
+        // console.log(user.words_left[index], index);
+        user.words_guessed.push(worded);
+        user.words_left.splice(index, 1);
+        const update = await Leaderboard.updateOne({_id: user_id}, user);
+        res.status(200).json({word: guessed, score: user.score, message: "You won!"});
+        return;
+      }
+
+      // LEADERS[index] = user;
+      // fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+      const update = await Leaderboard.updateOne({_id: user_id}, user);
+      res.status(200).json({word: guessed});
+      return;
+    }
+  } catch (error) {
+    res.status(500).send({message: error.message});
   }
-
-
 
 });
+
+
+app.post('/single-game', async (req, res) => {
+  const {word, definition} = req.body;
+
+  const shared_user = new Leaderboard({
+    username: "Shared",
+    words_left: [{word: word, definition: definition}],
+    shared: true
+  });
+
+  try {
+    const saved_user = await shared_user.save();
+    
+
+    res.status(200).json({url: "/word/" + saved_user._id});
+  } catch (error) {
+    res.status(500).send({message: error.message});
+  }
+
+});
+
+
+
+
 
 
 
