@@ -140,7 +140,7 @@ app.get('/word/:user_id', async (req, res) => {
 
     if (session_user.words_left.length === 0 && session_user.words_guessed.length === 0) {
       var words = [];
-      for (var i = 0; i < 1; i++) {
+      for (var i = 0; i < 10; i++) {
         const word_info = await axios.get('https://random-words-api-by-mcnaveen.vercel.app/word');
         words.push(word_info.data[0]);
       }
@@ -456,7 +456,7 @@ app.post('/single-game', async (req, res) => {
     const saved_user = await shared_user.save();
     
 
-    res.status(200).json({url: "/word/" + saved_user._id});
+    res.status(200).json({url: saved_user._id});
   } catch (error) {
     res.status(500).send({message: error.message});
   }
