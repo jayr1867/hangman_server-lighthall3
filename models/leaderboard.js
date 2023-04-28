@@ -10,6 +10,20 @@ const leaderboardSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
+    words_guessed: [{type: String, defualt: []}],
+    words_left: [{type: String, defualt: []}],
+    current_word: {
+        type: String,
+        default: ""
+    },
+    guessing_word: {
+        type: String,
+        default: ""
+    },
+    letters_guessed: {
+        type: String,
+        default: ""
+    },
     submitted_date: {
         type: Date,
         required: true,
@@ -23,11 +37,9 @@ const leaderboardSchema = new mongoose.Schema({
         min: 0
     },
     hints_left: {
-        type: Number,
-        required: true,
-        default: 3,
-        max: 3,
-        min: 0
+        total: {type: Number, default: 3},
+        pop_up: {type: Number, default: 2},
+        definition: {type: Number, default: 1}
     }
 });
 

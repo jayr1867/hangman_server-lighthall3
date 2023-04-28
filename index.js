@@ -1,4 +1,4 @@
-// require('dotenv').config();
+require('dotenv').config();
 
 /* leaderboard.json has all the user data, and words.json 
   has all the hard-coded words, with definitions. */
@@ -21,13 +21,13 @@ const alphabetLower = "abcdefghijklmnopqrstuvwxyz";
 var LEADERS = [];
 
 // connecting to the db.
-// mongoose.connect(uri, {
-//     useNewUrlParser: true
-//   }).then((conn) => {
-//     console.log("CONNECTED!");
-//   }).catch((err) => {
-//     console.log(err);
-//   })
+mongoose.connect(uri, {
+    useNewUrlParser: true
+  }).then((conn) => {
+    console.log("CONNECTED!");
+  }).catch((err) => {
+    console.log(err);
+  })
 
 
 app.use(cors());
@@ -79,24 +79,18 @@ app.post('/leaderboard', (req, res) => {
 // taking the username from the body and adding the newly created object to the json file.
 app.post('/newplayer', async (req, res) => {
   const username = req.body.newplayer;
-  const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
-  const leadership = JSON.parse(data_file);
-  LEADERS = leadership;
-  const data = {
-    "user_id": LEADERS.length + 1,  // will be "_id" when db is added.
+
+  const data = new Leaderboard({
     "username": username,
-    "score": 0,
-    "words_guessed": [],  // words "correctly" guessed in one session.
-    "current_word": "",   // the "current" word that the user is guessing.
-    "guessing_word": "",  // the word that the user is guessing, but would be exatly opposite of the user's guess. (explained below)
-    "words_left": ["hello", "miserable", "ecstatic","bliss","color","heaven","mountain","sky","riddle","library"],
-    "submitted_date": Math.floor(Date.now() / 1000), // Time in seconds UTC - this needs to be converted on the FE
-    "guesses_left": 8,
-    "hints_left": 3
-  };
-  LEADERS.push(data);
-  fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
-  res.status(200).send([]);
+  });
+
+  try {
+    const savedData = await data.save();
+    res.status(200).send([]);
+  } catch (error) {
+    res.status(500).send({message: error.message});
+  }
+
 });
 
 
@@ -115,8 +109,7 @@ app.get('/word/:user_id', async (req, res) => {
   const randomIndex = Math.floor(Math.random() * user.words_left.length);
   const word = user.words_left[randomIndex];
   user.current_word = word;
-  LEADERS[index] = user;
-  fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+  
 
   console.log(word.length);
   var send_word = "";
@@ -124,6 +117,15 @@ app.get('/word/:user_id', async (req, res) => {
   for (var i = 0; i < word.length; i++) {
     send_word += "_";
   }
+
+  user.letters_guessed = "";
+  user.guesses_left = 8;
+  user.hints_left.total = 3;
+  user.hints_left.pop_up = 2;
+  user.hints_left.definition = 1;
+  user.guessing_word = send_word;
+  LEADERS[index] = user;
+  fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
 
   res.status(200).json({word: send_word});
 
@@ -140,45 +142,178 @@ app.get('/word/:user_id', async (req, res) => {
 
 app.get('/make-guess/:user_id/:guess', async (req, res) => {
   userID = req.params.user_id;
-  guess = req.params.guess;
+  guess = req.params.guess.toLowerCase();
+
+  if (guess.length != 1) {
+    res.status(400).json({message: "Please send only one letter at a time."});
+    return;
+  }
+
+  if (!alphabetLower.includes(guess)) {
+    res.status(400).json({message: "Please send only letters."});
+    return;
+  }
+
   const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
   const leadership = JSON.parse(data_file);
   LEADERS = leadership;
+
   var user = LEADERS.find(user => user.user_id == userID);
   const index = LEADERS.indexOf(user);
+
   var word = user.current_word;
+  var letter = user.letters_guessed;
   var send_word = "";
-  var new_word = "";
+
   var found = false;
+  var won = false;
 
-
-  // was working on this right before kartik's text.
-  // need to add a temp variable to store the word, and then change the word to guessing_word.
-  // you could skip this if you don't understand what's going on here. (I am soo sorry!)
-  for (var i = 0; i < word.length; i++) {
-    if (word[i] == guess) {
-      send_word += guess;
-      new_word += "_";
-      found = true;
+  if (letter.includes(guess)) {
+    user.guesses_left -= 1;
+    LEADERS[index] = user;
+    fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+    res.status(200).json({message: "You already guessed this letter."});
+    return;
+  } else {
+    for (var i = 0; i < word.length; i++) {
+      if (word[i] == guess) {
+        send_word += guess;
+        found = true;
+      } else {
+        send_word += user.guessing_word[i];
+      }
+    }
+    if (user.current_word === send_word) {
+      won = true;
+      user.score += 10;
+      user.words_guessed.push(user.current_word);
+      user.words_left.splice(user.words_left.indexOf(user.current_word), 1);
     } else {
-      send_word += "_";
-      new_word += word[i];
+      if (!found) {
+        user.guesses_left -= 1;
+      }
+      user.letters_guessed += guess;
     }
   }
 
-  if (!found) {
-    user.guesses_left -= 1;
-  }
-
-  console.log(new_word);
-  user.current_word = new_word;
+  user.guessing_word = send_word;
   // user.current_word = send_word;
   LEADERS[index] = user;
   fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
 
-  res.status(200).json({word: send_word});
+  res.status(200).json(
+    {
+      word: send_word,
+      guesses_left: user.guesses_left,
+      hints_left: user.hints_left,
+      won: won
+    });
 
 });
+
+
+
+
+
+app.get('/hint/:user_id/:type', async (req, res) => {
+
+  var type = req.params.type.toLowerCase();
+  if (type != "def" && type != "pop") {
+    res.status(400).json({message: "Please send proper hint request."});
+    return;
+  }
+  var user_id = req.params.user_id;
+
+  const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
+  const leadership = JSON.parse(data_file);
+  LEADERS = leadership;
+
+  var user = LEADERS.find(user => user.user_id == user_id);
+
+  if (user.current_word === "") {
+    res.status(400).json({message: "Please start a game first."});
+    return;
+  }
+
+  const index = LEADERS.indexOf(user);
+
+  if (user.hints_left.total <= 0) {
+    res.status(400).json({message: "You don't have any hints left."});
+    return;
+  }
+
+  if (type == "def") {
+    if (user.hints_left.definition <= 0) {
+      res.status(400).json({message: "You don't have any definition hints left."});
+      return;
+    }
+
+
+    const word_file = fs.readFileSync('./words.json', 'utf-8');
+    const words = JSON.parse(word_file);
+    var definition = words.find(word => word.word == user.current_word).definition;
+
+    user.hints_left.definition -= 1;
+    user.hints_left.total -= 1;
+
+    LEADERS[index] = user;
+    fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+    res.status(200).json({Definition: definition});
+
+    return;
+  }
+
+  if (type == "pop") {
+
+    if (user.hints_left.pop_up <= 0) {
+      res.status(400).json({message: "You don't have any pop-up hints left."});
+      return;
+    }
+    
+    var answer = user.current_word;
+    var guessed = user.guessing_word;
+
+    var indices = [];
+
+    for (var i = 0; i < guessed.length; i++) {
+      if (guessed[i] == "_") {
+        indices.push(i);
+      }
+    }
+
+    var rand_index = indices[Math.floor(Math.random() * indices.length)];
+
+    // guessed[rand_index] = answer[rand_index];
+    guessed = guessed.substring(0, rand_index) + answer[rand_index] + guessed.substring(rand_index + 1);
+
+    user.letters_guessed += answer[rand_index];
+
+    user.guessing_word = guessed;
+    user.hints_left.total -= 1;
+    user.hints_left.pop_up -= 1;
+
+    LEADERS[index] = user;
+    fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+    res.status(200).json({word: guessed});
+    return;
+  }
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 app.get('/make-guess/v2/:user_id/:guess', async (req, res) => {
