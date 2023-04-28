@@ -140,7 +140,7 @@ app.get('/word/:user_id', async (req, res) => {
 
     if (session_user.words_left.length === 0 && session_user.words_guessed.length === 0) {
       var words = [];
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 1; i++) {
         const word_info = await axios.get('https://random-words-api-by-mcnaveen.vercel.app/word');
         words.push(word_info.data[0]);
       }
@@ -150,7 +150,7 @@ app.get('/word/:user_id', async (req, res) => {
     }
 
     if (session_user.words_left.length === 0 && session_user.words_guessed.length > 0) {
-      res.status(400).json({message: "You have guessed all the words!"});
+      res.status(200).json({message: "You have guessed all the words!"});
       return;
     }
 
