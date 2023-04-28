@@ -10,8 +10,20 @@ const leaderboardSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
-    words_guessed: [{type: String, defualt: []}],
-    words_left: [{type: String, defualt: []}],
+    words_guessed: [{word: {
+            type: String
+        }, 
+        definition: {
+            type: String
+        }}
+    ],
+    words_left: [{word: {
+            type: String
+        }, 
+        definition: {
+            type: String
+        }}
+    ],
     current_word: {
         type: String,
         default: ""
