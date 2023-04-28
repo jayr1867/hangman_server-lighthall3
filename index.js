@@ -82,10 +82,11 @@ app.get('/leaderboard', async (req, res) => {
       {
         _id:1, 
         username:1, 
-        score:1
+        score:1,
       }).sort({score: -1, submitted_date: -1}).limit(10);
+
     
-    res.status(200).send( leadership );
+    res.status(200).send( [] );
   } catch (error) {
     console.log({message: error.message});
     res.status(500).send({message: error.message});
@@ -154,7 +155,15 @@ app.get('/word/:user_id', async (req, res) => {
     }
 
     if (session_user.guessing_word.includes("_") && session_user.guesses_left > 0) {
-      res.status(400).json({message: "You have not guessed the word yet!"});
+      res.status(200).json(
+        {
+          word: session_user.guessing_word, 
+          score: session_user.score, 
+          guesses_left: session_user.guesses_left,
+          hints_left: session_user.hints_left,
+          letters_guessed: session_user.letters_guessed,
+          message: "You have not guessed the word yet!"
+        });
       return;
     }
 
@@ -162,13 +171,13 @@ app.get('/word/:user_id', async (req, res) => {
 
     const word = session_user.words_left[randomIndex].word;
 
-    console.log (word);
+    // console.log (word);
     var send_word = "";
 
     for (var i = 0; i < word.length; i++) {
       send_word += "_";
     }
-    console.log(send_word);
+    // console.log(send_word);
 
     session_user.letters_guessed = "";
     session_user.current_word = word;
@@ -177,10 +186,11 @@ app.get('/word/:user_id', async (req, res) => {
     session_user.hints_left.total = 3;
     session_user.hints_left.definition = 1;
     session_user.hints_left.pop_up = 2;
+    session_user.hints_left.used_definition = "";
 
     const update = await Leaderboard.updateOne({_id: userID}, session_user);
 
-    console.log(update);
+    // console.log(update);
 
     res.status(200).json({word: send_word, score: session_user.score});
 
@@ -203,16 +213,6 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
   userID = new ObjectId(req.params.user_id);
   guess = req.params.guess.toLowerCase();
 
-  if (guess.length != 1) {
-    res.status(400).json({message: "Please send only one letter at a time."});
-    return;
-  }
-
-  if (!alphabetLower.includes(guess)) {
-    res.status(400).json({message: "Please send only letters."});
-    return;
-  }
-
   // const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
   // const leadership = JSON.parse(data_file);
   // LEADERS = leadership;
@@ -223,6 +223,32 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
   try {
 
     var user = await Leaderboard.findOne({_id: userID});
+
+    if (guess.length != 1) {
+      res.status(400).json(
+        {
+          word: user.guessing_word, 
+          score: user.score, 
+          guesses_left: user.guesses_left,
+          hints_left: user.hints_left,
+          letters_guessed: user.letters_guessed,
+          message: "Please send only one letter at a time."
+        });
+      return;
+    }
+  
+    if (!alphabetLower.includes(guess)) {
+      res.status(400).json(
+        {
+          word: user.guessing_word, 
+          score: user.score, 
+          guesses_left: user.guesses_left,
+          hints_left: user.hints_left,
+          letters_guessed: user.letters_guessed,
+          message: "Please send only letters."
+        });
+      return;
+    }
 
     var word = user.current_word.toLowerCase();
     var letter = user.letters_guessed;
@@ -260,7 +286,7 @@ app.get('/make-guess/:user_id/:guess', async (req, res) => {
       }
       if (word === send_word) {
         won = true;
-        user.score += 10;
+        user.score += 100;
 
         
         const worded = user.words_left.find(worded => worded.word === user.current_word);
@@ -345,6 +371,7 @@ app.get('/hint/:user_id/:type', async (req, res) => {
 
       user.hints_left.definition -= 1;
       user.hints_left.total -= 1;
+      user.hints_left.used_definition = definition;
 
       const update = await Leaderboard.updateOne({_id: user_id}, user);
       res.status(200).json({definition: definition});
@@ -391,7 +418,7 @@ app.get('/hint/:user_id/:type', async (req, res) => {
       user.hints_left.pop_up -= 1;
 
       if (guessed === answer) {
-        user.score += 10;
+        user.score += 100;
         const worded = user.words_left.find(worded => worded.word === user.current_word);
         const index = user.words_left.indexOf(worded);
         // const index = user.words_left.indexOf((worded) => worded.word === user.current_word);

@@ -51,7 +51,8 @@ const leaderboardSchema = new mongoose.Schema({
     hints_left: {
         total: {type: Number, default: 3},
         pop_up: {type: Number, default: 2},
-        definition: {type: Number, default: 1}
+        definition: {type: Number, default: 1},
+        used_definition: {type: String, default: ""}
     },
     shared: {
         type: Boolean,
