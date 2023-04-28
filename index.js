@@ -75,25 +75,32 @@ app.get('/', async (req, res) => {
 });
 
 // getting the leadership data from leaderboard.json
-app.get('/leaderboard', (req, res) => {
-  const data = fs.readFileSync('./leaderboard.json', 'utf-8');
-  const leadership = JSON.parse(data);
-  res.json(leadership);
+app.get('/leaderboard', async (req, res) => {
+  // const data = fs.readFileSync('./leaderboard.json', 'utf-8');
+  // const leadership = JSON.parse(data);
+  try {
+    const leadership = await Leaderboard.find();
+    res.status(200).json({leadership});
+  } catch (error) {
+    console.log({message: error.message});
+    res.status(500).send({message: error.message});
+  }
+  // res.json(leadership);
 });
 
 // store an array of objects in leaderboard.json
 // created this just to have an idea of how everything would work in terms of db. 
 // I dont think we need this.
-app.post('/leaderboard', (req, res) => {
-  const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
-  const leadership = JSON.parse(data_file);
-  const data = req.body;
-  LEADERS = leadership;
-  LEADERS.push(data);
+// app.post('/leaderboard', (req, res) => {
+//   const data_file = fs.readFileSync('./leaderboard.json', 'utf-8');
+//   const leadership = JSON.parse(data_file);
+//   const data = req.body;
+//   LEADERS = leadership;
+//   LEADERS.push(data);
   
-  fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
-  res.status(200).send([]);
-});
+//   fs.writeFileSync('./leaderboard.json', JSON.stringify(LEADERS));
+//   res.status(200).send([]);
+// });
 
 
 // adds a new player to the leaderboard
