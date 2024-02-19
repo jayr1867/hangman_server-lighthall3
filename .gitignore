@@ -3,4 +3,4 @@ node_modules
 plan
 .vercel
 .DS_Store
-
+package-lock.json
